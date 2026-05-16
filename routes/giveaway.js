@@ -92,6 +92,7 @@ router.get("/export", async (req, res) => {
     });
 
     res.setHeader("Content-Type", "text/csv");
+
     res.setHeader(
       "Content-Disposition",
       "attachment; filename=urutoken-giveaway-entries.csv"
@@ -123,7 +124,7 @@ router.post("/", async (req, res) => {
 
   try {
 
-    const {
+    let {
       telegram,
       twitter,
       wallet
@@ -137,6 +138,10 @@ router.post("/", async (req, res) => {
       });
 
     }
+
+    telegram = telegram.trim().toLowerCase();
+    twitter = twitter.trim().toLowerCase();
+    wallet = wallet.trim().toLowerCase();
 
     const totalEntries = await pool.query(
       `SELECT COUNT(*) FROM giveaway_entries`
@@ -152,6 +157,11 @@ router.post("/", async (req, res) => {
       });
 
     }
+
+
+    // ========================================
+    // DUPLICATE WALLET CHECK
+    // ========================================
 
     const existingWallet = await pool.query(
       `
@@ -170,10 +180,60 @@ router.post("/", async (req, res) => {
 
     }
 
+
+    // ========================================
+    // DUPLICATE TELEGRAM CHECK
+    // ========================================
+
+    const existingTelegram = await pool.query(
+      `
+      SELECT * FROM giveaway_entries
+      WHERE LOWER(telegram) = LOWER($1)
+      `,
+      [telegram]
+    );
+
+    if (existingTelegram.rows.length > 0) {
+
+      return res.status(400).json({
+        success: false,
+        message: "Telegram account already used"
+      });
+
+    }
+
+
+    // ========================================
+    // DUPLICATE TWITTER CHECK
+    // ========================================
+
+    const existingTwitter = await pool.query(
+      `
+      SELECT * FROM giveaway_entries
+      WHERE LOWER(twitter) = LOWER($1)
+      `,
+      [twitter]
+    );
+
+    if (existingTwitter.rows.length > 0) {
+
+      return res.status(400).json({
+        success: false,
+        message: "X account already used"
+      });
+
+    }
+
+
+    // ========================================
+    // SAVE ENTRY
+    // ========================================
+
     await pool.query(
       `
       INSERT INTO giveaway_entries
       (telegram, twitter, wallet)
+
       VALUES ($1, $2, $3)
       `,
       [telegram, twitter, wallet]
