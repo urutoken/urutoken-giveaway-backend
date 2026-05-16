@@ -16,9 +16,7 @@ router.get("/stats", async (req, res) => {
       `SELECT COUNT(*) FROM giveaway_entries`
     );
 
-    const joined = parseInt(
-      result.rows[0].count
-    );
+    const joined = parseInt(result.rows[0].count);
 
     const limit = 1000;
 
@@ -46,6 +44,78 @@ router.get("/stats", async (req, res) => {
 
 
 // ========================================
+// ADMIN CSV EXPORT API
+// ========================================
+
+router.get("/export", async (req, res) => {
+
+  try {
+
+    const secret = req.query.secret;
+
+    if (!process.env.EXPORT_SECRET || secret !== process.env.EXPORT_SECRET) {
+
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        telegram,
+        twitter,
+        wallet,
+        created_at
+      FROM giveaway_entries
+      ORDER BY id ASC
+      `
+    );
+
+    const rows = result.rows;
+
+    let csv = "id,telegram,twitter,wallet,created_at\n";
+
+    rows.forEach((row) => {
+
+      csv += [
+        row.id,
+        `"${String(row.telegram).replace(/"/g, '""')}"`,
+        `"${String(row.twitter).replace(/"/g, '""')}"`,
+        `"${String(row.wallet).replace(/"/g, '""')}"`,
+        `"${row.created_at}"`
+      ].join(",") + "\n";
+
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=urutoken-giveaway-entries.csv"
+    );
+
+    res.status(200).send(csv);
+
+  }
+
+  catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Export Error"
+    });
+
+  }
+
+});
+
+
+// ========================================
 // GIVEAWAY JOIN API
 // ========================================
 
@@ -59,7 +129,6 @@ router.post("/", async (req, res) => {
       wallet
     } = req.body;
 
-    // Required fields
     if (!telegram || !twitter || !wallet) {
 
       return res.status(400).json({
@@ -69,16 +138,12 @@ router.post("/", async (req, res) => {
 
     }
 
-    // Giveaway limit check
     const totalEntries = await pool.query(
       `SELECT COUNT(*) FROM giveaway_entries`
     );
 
-    const currentCount = parseInt(
-      totalEntries.rows[0].count
-    );
+    const currentCount = parseInt(totalEntries.rows[0].count);
 
-    // Giveaway Full
     if (currentCount >= 1000) {
 
       return res.status(400).json({
@@ -88,16 +153,12 @@ router.post("/", async (req, res) => {
 
     }
 
-    // Duplicate wallet check
     const existingWallet = await pool.query(
-
       `
       SELECT * FROM giveaway_entries
-      WHERE wallet = $1
+      WHERE LOWER(wallet) = LOWER($1)
       `,
-
       [wallet]
-
     );
 
     if (existingWallet.rows.length > 0) {
@@ -109,18 +170,13 @@ router.post("/", async (req, res) => {
 
     }
 
-    // Insert entry
     await pool.query(
-
       `
       INSERT INTO giveaway_entries
       (telegram, twitter, wallet)
-
       VALUES ($1, $2, $3)
       `,
-
       [telegram, twitter, wallet]
-
     );
 
     res.json({
