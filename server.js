@@ -1,45 +1,25 @@
 require("dotenv").config();
-const express = require("express");
-const { ethers } = require("ethers");
 
-// ✅ Routes
-const webhookRoutes = require("./routes/webhook");
-const userRoutes = require("./routes/user");
-const presaleRoutes = require("./routes/presale");
-const giveawayRoutes = require("./routes/giveaway"); // ✅ NEW
+const express = require("express");
+
+// ✅ Giveaway Route
+const giveawayRoutes = require("./routes/giveaway");
 
 const app = express();
 
-// ✅ Alchemy Provider
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-
 app.use(express.json({ limit: "10mb" }));
 
-// ✅ Root route
+// ✅ Root Route
 app.get("/", (req, res) => {
+
   res.json({
     status: "OK",
-    message: "Urutoken backend running",
+    message: "URUTOKEN Giveaway Backend Running"
   });
+
 });
 
-// ✅ Block test route
-app.get("/block", async (req, res) => {
-  try {
-    const block = await provider.getBlockNumber();
-
-    res.json({ block });
-
-  } catch (err) {
-
-    res.status(500).json({
-      error: err.message
-    });
-
-  }
-});
-
-// ✅ Database test route
+// ✅ Database Test Route
 app.get("/db-test", async (req, res) => {
 
   try {
@@ -53,7 +33,9 @@ app.get("/db-test", async (req, res) => {
       time: result.rows[0].now
     });
 
-  } catch (err) {
+  }
+
+  catch (err) {
 
     res.status(500).json({
       status: "DB ERROR",
@@ -64,18 +46,13 @@ app.get("/db-test", async (req, res) => {
 
 });
 
-// ✅ Existing routes
-app.use("/webhook", webhookRoutes);
-app.use("/api/user", userRoutes);
-app.use("/api/presale", presaleRoutes);
-
-// ✅ Giveaway route
+// ✅ Giveaway API
 app.use("/api/giveaway", giveawayRoutes);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
 
-  console.log(`Urutoken backend running on port ${PORT}`);
+  console.log(`URUTOKEN Giveaway Backend Running On Port ${PORT}`);
 
 });
