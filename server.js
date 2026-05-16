@@ -1,11 +1,15 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 
 // ✅ Giveaway Route
 const giveawayRoutes = require("./routes/giveaway");
 
 const app = express();
+
+// ✅ Enable CORS
+app.use(cors());
 
 app.use(express.json({ limit: "10mb" }));
 
