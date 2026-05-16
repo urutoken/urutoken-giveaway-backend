@@ -127,14 +127,48 @@ router.post("/", async (req, res) => {
     let {
       telegram,
       twitter,
-      wallet
+      wallet,
+      turnstileToken
     } = req.body;
 
-    if (!telegram || !twitter || !wallet) {
+    if (!telegram || !twitter || !wallet || !turnstileToken) {
 
       return res.status(400).json({
         success: false,
         message: "All fields are required"
+      });
+
+    }
+
+    // ========================================
+    // VERIFY TURNSTILE
+    // ========================================
+
+    const verifyURL =
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+
+    const verifyResponse = await fetch(verifyURL, {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+
+      body: new URLSearchParams({
+        secret: process.env.TURNSTILE_SECRET,
+        response: turnstileToken
+      })
+
+    });
+
+    const verifyData = await verifyResponse.json();
+
+    if (!verifyData.success) {
+
+      return res.status(400).json({
+        success: false,
+        message: "Captcha verification failed"
       });
 
     }
@@ -204,7 +238,7 @@ router.post("/", async (req, res) => {
 
 
     // ========================================
-    // DUPLICATE TWITTER CHECK
+    // DUPLICATE X CHECK
     // ========================================
 
     const existingTwitter = await pool.query(
