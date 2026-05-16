@@ -13,6 +13,7 @@ router.post("/", async (req, res) => {
       wallet
     } = req.body;
 
+    // Required fields check
     if (!telegram || !twitter || !wallet) {
 
       return res.status(400).json({
@@ -22,6 +23,28 @@ router.post("/", async (req, res) => {
 
     }
 
+    // Duplicate wallet check
+    const existingWallet = await pool.query(
+
+      `
+      SELECT * FROM giveaway_entries
+      WHERE wallet = $1
+      `,
+
+      [wallet]
+
+    );
+
+    if (existingWallet.rows.length > 0) {
+
+      return res.status(400).json({
+        success: false,
+        message: "Wallet already joined giveaway"
+      });
+
+    }
+
+    // Insert new entry
     await pool.query(
 
       `
