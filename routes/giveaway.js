@@ -3,6 +3,52 @@ const router = express.Router();
 
 const pool = require("../db");
 
+
+// ========================================
+// GIVEAWAY LIVE STATS API
+// ========================================
+
+router.get("/stats", async (req, res) => {
+
+  try {
+
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM giveaway_entries`
+    );
+
+    const joined = parseInt(
+      result.rows[0].count
+    );
+
+    const limit = 1000;
+
+    res.json({
+      success: true,
+      joined,
+      limit,
+      remaining: limit - joined
+    });
+
+  }
+
+  catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Stats Error"
+    });
+
+  }
+
+});
+
+
+// ========================================
+// GIVEAWAY JOIN API
+// ========================================
+
 router.post("/", async (req, res) => {
 
   try {
@@ -17,8 +63,8 @@ router.post("/", async (req, res) => {
     if (!telegram || !twitter || !wallet) {
 
       return res.status(400).json({
-        success:false,
-        message:"All fields are required"
+        success: false,
+        message: "All fields are required"
       });
 
     }
@@ -32,11 +78,12 @@ router.post("/", async (req, res) => {
       totalEntries.rows[0].count
     );
 
-    if(currentCount >= 1000){
+    // Giveaway Full
+    if (currentCount >= 1000) {
 
       return res.status(400).json({
-        success:false,
-        message:"Giveaway Full - 1000 Participants Reached"
+        success: false,
+        message: "Giveaway Full - 1000 Participants Reached"
       });
 
     }
@@ -53,11 +100,11 @@ router.post("/", async (req, res) => {
 
     );
 
-    if(existingWallet.rows.length > 0){
+    if (existingWallet.rows.length > 0) {
 
       return res.status(400).json({
-        success:false,
-        message:"Wallet already joined giveaway"
+        success: false,
+        message: "Wallet already joined giveaway"
       });
 
     }
@@ -69,27 +116,27 @@ router.post("/", async (req, res) => {
       INSERT INTO giveaway_entries
       (telegram, twitter, wallet)
 
-      VALUES ($1,$2,$3)
+      VALUES ($1, $2, $3)
       `,
 
-      [telegram,twitter,wallet]
+      [telegram, twitter, wallet]
 
     );
 
     res.json({
-      success:true,
-      message:"Successfully Joined Giveaway"
+      success: true,
+      message: "Successfully Joined Giveaway"
     });
 
   }
 
-  catch(error){
+  catch (error) {
 
     console.log(error);
 
     res.status(500).json({
-      success:false,
-      message:"Server Error"
+      success: false,
+      message: "Server Error"
     });
 
   }
